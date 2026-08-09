@@ -1,0 +1,30 @@
+{
+  "name": "vs-auto",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone video generation machine + YouTube auto-uploader",
+  "main": "run.js",
+  "scripts": {
+    "start": "node run.js",
+    "machine": "node run.js",
+    "uploader": "python yt_uploader/uploader.py",
+    "uploader:once": "python yt_uploader/uploader.py --once",
+    "oauth": "python yt_uploader/setup_oauth.py",
+    "tiktok-uploader": "node tiktok_uploader/main.js",
+    "tiktok-uploader:once": "node tiktok_uploader/main.js --once",
+    "tiktok-uploader:check": "node tiktok_uploader/main.js --check-session",
+    "instagram-uploader": "node instagram_uploader/main.js",
+    "instagram-uploader:once": "node instagram_uploader/main.js --once",
+    "instagram-uploader:check": "node instagram_uploader/main.js --check-session",
+    "check": "node --check run.js && node --check config.js && node --check machine.js && node --check src\\config.js && node --check src\\account-manager.js && node --check src\\ai-provider.js && node --check src\\auto-video-pipeline.js && node --check src\\background-music.js && node --check src\\fs-utils.js && node --check src\\vertical-renderer.js && node --check src\\video-cut.js && node --check src\\yt-dlp.js && node --check tiktok_uploader\\config.js && node --check tiktok_uploader\\logger.js && node --check tiktok_uploader\\errors.js && node --check tiktok_uploader\\session.js && node --check tiktok_uploader\\uploader.js && node --check tiktok_uploader\\main.js && node --check instagram_uploader\\config.js && node --check instagram_uploader\\logger.js && node --check instagram_uploader\\errors.js && node --check instagram_uploader\\caption.js && node --check instagram_uploader\\session.js && node --check instagram_uploader\\uploader.js && node --check instagram_uploader\\main.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.58.2"
+  }
+}
