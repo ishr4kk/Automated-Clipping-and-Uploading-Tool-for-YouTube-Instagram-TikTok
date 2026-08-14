@@ -35,10 +35,10 @@ SECTIONS = [
         ("OPENROUTER_FRAME_MODEL", "Fallback frame model", "text"),
     ]),
     ("Source Channels", [
-        ("AUTO_VIDEO_CHANNELS", "YouTube channels where videos are found", "list"),
+        ("AUTO_VIDEO_CHANNELS", "Source channels: YouTube URL, TikTok ID (@user), or Instagram ID", "list"),
     ]),
     ("Music", [
-        ("BACKGROUND_MUSIC_PLAYLISTS", "YouTube playlists where songs are found", "list"),
+        ("BACKGROUND_MUSIC_PLAYLISTS", "Music playlists: YouTube, YouTube Music, or Spotify", "list"),
         ("BACKGROUND_MUSIC_ENABLED", "Background music on/off", "bool"),
         ("BACKGROUND_MUSIC_VOLUME", "Music volume relative to video audio (0.0 - 1.0)", "float"),
     ]),

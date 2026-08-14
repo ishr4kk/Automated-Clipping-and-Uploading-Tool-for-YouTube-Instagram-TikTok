@@ -1,4 +1,4 @@
-"""Console + file logging in the same style as the machine's logger.js."""
+
 
 import logging
 import sys

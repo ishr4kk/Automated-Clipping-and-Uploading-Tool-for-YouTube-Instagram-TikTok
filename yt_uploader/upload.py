@@ -1,9 +1,4 @@
-"""Upload a single video to YouTube.
 
-Port of the proven upload_to_youtube from let me paint please/verticals/upload.py:
-resumable MediaFileUpload, next_chunk() progress loop, exponential-backoff
-retry on failure, category 20 (Entertainment), public, not made for kids.
-"""
 
 import time
 from functools import wraps

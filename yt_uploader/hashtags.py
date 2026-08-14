@@ -1,11 +1,3 @@
-"""Hashtag handling for titles/descriptions.
-
-The exact required tokens are appended case-sensitively (they are specified
-verbatim: #shorts #SHORT #short and #movieclips #movie <topic> #latest
-#trending). Existing content is preserved; only missing tags are appended,
-mirroring the proven ensure_tags approach from the let me paint please project.
-"""
-
 import re
 
 from .config import DESCRIPTION_TAGS, TITLE_TAGS

@@ -14,6 +14,7 @@ function parseArgs(argv) {
     else if (arg === "--delay") {
       const parsed = Number(argv[i + 1]);
       if (Number.isFinite(parsed) && parsed >= 0) args.delay = parsed;
+      i += 1;
     }
   }
   return args;

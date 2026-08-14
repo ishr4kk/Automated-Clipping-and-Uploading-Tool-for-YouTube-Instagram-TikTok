@@ -40,8 +40,8 @@ function selectRandomChannel(channels = config.autoVideo.channels, rng = Math.ra
   }
   const index = Math.floor(rng() * channels.length);
   const url = channels[index];
-  const match = url.match(/@([^/?#]+)/i);
-  return { url, handle: match ? match[1] : url };
+  const platform = ytDlp.detectSourcePlatform(url) || "unknown";
+  return { url, handle: ytDlp.channelHandle(url), platform };
 }
 
 
@@ -93,7 +93,7 @@ function shuffle(items, rng) {
 
 
 async function selectRandomMovieVideo(channelUrl, { rng = Math.random, maxAttempts = 20, useAi = true, cookiesFile = null } = {}) {
-  const catalog = await ytDlp.listChannelVideos(channelUrl);
+  const catalog = await ytDlp.listChannelVideos(channelUrl, { cookiesFile });
   if (catalog.length === 0) {
     throw new Error("Channel catalog is empty or could not be listed.");
   }
@@ -147,7 +147,44 @@ async function downloadSource(video, workDir, { cookiesFile = null } = {}) {
 }
 
 
+function fallbackAnalysis(metadata = {}) {
+  const title = String(metadata.title || "").trim();
+  const description = String(metadata.description || "").trim();
+  const channel = String(metadata.channel || "");
+  const movieMatch = title.match(/(.+?)\s*\(\d{4}\)/);
+  const action =
+    description
+      .split(/\n|\.\s+/)
+      .map((s) => s.trim())
+      .find((s) => s.length > 0) || "";
+  return {
+    movie: movieMatch ? movieMatch[1].trim() : "",
+    scene: title.slice(0, 200),
+    characters: [],
+    action: action.slice(0, 300),
+    context: channel,
+    interestingPart: "",
+    whyInteresting: "",
+    usedFrames: false,
+  };
+}
+
+function fallbackRetentionCaption(analysis, metadata) {
+  const title = String(metadata?.title || "")
+    .trim()
+    .replace(/\s*\(\d{4}\)/, "")
+    .slice(0, 84);
+  const base = title || analysis.movie || analysis.scene || "Cinematic movie clip";
+  return { caption: base.length > 84 ? `${base.slice(0, 84)}...` : base };
+}
+
 async function analyzeAndCaption({ sourcePath, metadata }) {
+  if (!config.openRouterApiKey) {
+    log("OPENROUTER_API_KEY not configured; using metadata-based analysis (no AI)");
+    const analysis = fallbackAnalysis(metadata);
+    const { caption } = fallbackRetentionCaption(analysis, metadata);
+    return { analysis, frames: [], caption };
+  }
   const framesDir = path.join(path.dirname(sourcePath), "frames");
   const frames = await renderer.extractFrames(sourcePath, 6, framesDir);
   const analysis = await ai.analyzeMovieVideo({ videoPath: sourcePath, metadata, frames });
@@ -336,9 +373,10 @@ async function saveToQueue({ videoPath, platformCaptions, selectedPlatforms, acc
   const savedPaths = {};
   for (const platform of targetPlatforms) {
     const captionText = buildPlatformCaptionText(platform, platformCaptions);
-    if (captionText) {
-      const descPath = path.join(pendingDir, `${baseName}.${platform}.description`);
+    if (captionText && !savedPaths.sidecar) {
+      const descPath = path.join(pendingDir, `${baseName}.description`);
       await fs.writeFile(descPath, captionText, "utf8");
+      savedPaths.sidecar = descPath;
     }
     savedPaths[platform] = destPath;
   }
@@ -391,8 +429,9 @@ async function runPipeline({
   try {
 
     if (!config.openRouterApiKey) {
-      throw new Error(
-        `OPENROUTER_API_KEY is not configured. Set it in .env (https://openrouter.ai/keys) – it is required for movie-relevance verification, scene analysis, and caption generation.`
+      log(
+        "OPENROUTER_API_KEY not configured; running WITHOUT AI (keyword-only relevance, metadata-based captions). " +
+        "Set it in .env (https://openrouter.ai/keys) for scene analysis and AI captions."
       );
     }
 
@@ -410,22 +449,22 @@ async function runPipeline({
 
 
     let cookiesFile = null;
-    try {
-      const profileDir = await getPlatformProfileDir("youtube", resolvedAccountId);
-      const exported = await ytDlp.exportYoutubeCookies(profileDir, path.join(workDir, "cookies.txt"));
-      if (exported.count > 0) {
-        cookiesFile = exported.path;
-        log(`YouTube session cookies exported (${exported.count} cookies)`);
-      }
-    } catch (error) {
-      log(`No YouTube session cookies available (${error.message}); using fallback mode`);
-    }
-
 
     stage("Selecting random source channel");
     const channel = selectRandomChannel(config.autoVideo.channels, rng);
     okLog(`Selected: ${channel.handle} (${channel.url})`);
     context.channel = channel;
+
+    try {
+      const profileDir = await getPlatformProfileDir(channel.platform, resolvedAccountId);
+      const exported = await ytDlp.exportPlatformCookies(channel.platform, profileDir, path.join(workDir, "cookies.txt"));
+      if (exported.count > 0) {
+        cookiesFile = exported.path;
+        log(`${channel.platform} session cookies exported (${exported.count} cookies)`);
+      }
+    } catch (error) {
+      log(`No ${channel.platform} session cookies available (${error.message}); using fallback mode`);
+    }
 
 
     stage("Selecting random video");

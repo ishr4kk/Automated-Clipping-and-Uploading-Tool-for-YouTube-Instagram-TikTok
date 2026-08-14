@@ -145,22 +145,27 @@ async function prepareVideoForAnalysis(videoPath) {
 
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "autovideo-preview-"));
   const previewPath = path.join(dir, `preview_${crypto.randomBytes(4).toString("hex")}.mp4`);
-  await runFfmpeg([
-    "-y",
-    "-i", videoPath,
-    "-vf", "scale='min(1280,iw)':-2",
-    "-r", "30",
-    "-c:v", "libx264",
-    "-preset", "veryfast",
-    "-crf", "30",
-    "-maxrate", "1.5M",
-    "-bufsize", "3M",
-    "-c:a", "aac",
-    "-b:a", "96k",
-    "-ar", "44100",
-    "-movflags", "+faststart",
-    previewPath,
-  ]);
+  try {
+    await runFfmpeg([
+      "-y",
+      "-i", videoPath,
+      "-vf", "scale='min(1280,iw)':-2",
+      "-r", "30",
+      "-c:v", "libx264",
+      "-preset", "veryfast",
+      "-crf", "30",
+      "-maxrate", "1.5M",
+      "-bufsize", "3M",
+      "-c:a", "aac",
+      "-b:a", "96k",
+      "-ar", "44100",
+      "-movflags", "+faststart",
+      previewPath,
+    ]);
+  } catch (error) {
+    await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
+    throw error;
+  }
 
   const previewStat = await fs.stat(previewPath);
   if (previewStat.size > MAX_BYTES) {

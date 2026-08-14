@@ -1,12 +1,4 @@
-"""One-time YouTube OAuth authorization for the vs auto uploader.
 
-Usage:
-  python yt_uploader/setup_oauth.py
-  python -m yt_uploader.setup_oauth
-
-Opens a browser, saves the token to yt_uploader/youtube_token.json.
-Reuse of the proven flow from let me paint please/scripts/setup_youtube_oauth.py.
-"""
 
 import sys
 from pathlib import Path

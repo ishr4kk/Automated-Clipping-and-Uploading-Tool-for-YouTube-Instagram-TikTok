@@ -1,12 +1,3 @@
-"""Paths and constants for the YouTube uploader.
-
-All uploader-owned state lives under this folder; videos are watched from
-queue/yt/upload and moved to queue/yt/done after a successful upload
-(that folder is reserved for the consuming uploader side by the machine).
-Every path can be overridden with a YT_UPLOADER_* environment variable so
-tests and other machines can run against isolated folders.
-"""
-
 import os
 from pathlib import Path
 

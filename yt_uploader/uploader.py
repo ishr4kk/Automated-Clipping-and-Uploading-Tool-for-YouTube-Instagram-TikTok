@@ -1,18 +1,4 @@
-"""YouTube auto-uploader watcher.
 
-Watches queue/yt/upload for finished videos (mp4/webm/mov/...). For each
-video it finds the matching sidecar (<base>.txt or <base>.description,
-written by the machine as "title\n\n<description>"), builds the final
-title/description with the required hashtags, verifies the file is complete
-(size stability + ffmpeg decode), uploads to YouTube, and moves the pair
-into queue/yt/done. Permanent failures move the pair into queue/yt/failed
-with an error note. A processed.json record prevents accidental duplicates.
-
-Usage:
-  python yt_uploader/uploader.py              watch continuously
-  python yt_uploader/uploader.py --once       scan once and exit (testing)
-  python yt_uploader/uploader.py --setup-oauth
-"""
 
 import argparse
 import json
@@ -118,7 +104,9 @@ def verify_video(path: Path) -> tuple:
             capture_output=True, text=True, timeout=300,
         )
         if proc.returncode != 0:
-            return False, (proc.stderr or "ffmpeg decode failed").strip().splitlines()[-1][-300:]
+            detail = (proc.stderr or "ffmpeg decode failed").strip()
+            detail_lines = detail.splitlines()
+            return False, (detail_lines[-1][-300:] if detail_lines else "ffmpeg decode failed")
         proc = subprocess.run(
             ["ffprobe", "-v", "error", "-show_entries", "format=duration,size",
              "-show_entries", "stream=codec_type", "-of", "json", str(path)],

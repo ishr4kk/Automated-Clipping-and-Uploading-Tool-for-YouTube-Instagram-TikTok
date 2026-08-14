@@ -41,26 +41,36 @@ function runFfmpegDecodeCheck(filePath) {
 }
 
 
-async function resolveCookies(workDir, logger) {
-  const candidates = [
-    path.join(machineConfig.projectRoot, ".profiles", "default", "youtube"),
-    path.join(machineConfig.projectRoot, ".profile-youtube"),
-  ];
-  for (const profileDir of candidates) {
+function platformProfileCandidates(platform) {
+  const root = machineConfig.projectRoot;
+  const candidates = [path.join(root, ".profiles", "default", platform)];
+  if (platform === "youtube") {
+    candidates.push(path.join(root, ".profile-youtube"));
+  } else if (platform === "instagram") {
+    candidates.push(path.join(root, ".profile-instagram"));
+  } else if (platform === "tiktok") {
+    candidates.push(path.join(root, ".profile"));
+  }
+  return candidates;
+}
+
+
+async function resolveCookiesForPlatform(platform, workDir, logger) {
+  for (const profileDir of platformProfileCandidates(platform)) {
     if (!(await fileExists(profileDir))) {
       continue;
     }
     try {
-      const exported = await ytDlp.exportYoutubeCookies(profileDir, path.join(workDir, "cookies.txt"));
+      const exported = await ytDlp.exportPlatformCookies(platform, profileDir, path.join(workDir, "cookies.txt"));
       if (exported.count > 0) {
-        logger.log(`YouTube session cookies exported (${exported.count} cookies)`);
+        logger.log(`${platform} session cookies exported (${exported.count} cookies)`);
         return exported.path;
       }
     } catch (error) {
       logger.warn(`Cookie export from ${profileDir} failed (${error.message}); using fallback mode`);
     }
   }
-  logger.log("No YouTube session cookies available; using fallback mode");
+  logger.log(`No ${platform} session cookies available; using fallback mode`);
   return null;
 }
 
@@ -191,8 +201,8 @@ async function generateJob({
 
   const selectedPlatforms = platforms.filter((p) => PLATFORMS[p]);
   const stageNames = [
-    "Preparing session cookies",
     "Selecting random source channel",
+    "Preparing session cookies",
     "Selecting random video",
     "Downloading source",
     "Analyzing scene + generating caption",
@@ -239,13 +249,13 @@ async function generateJob({
 
 
     stage(stageNames[0]);
-    const cookiesFile = await resolveCookies(workDir, log);
+    const channel = pipeline.selectRandomChannel(machineConfig.autoVideo.channels, rng);
+    log.ok(`Selected channel: ${channel.handle} (${channel.platform})`);
+    context.channel = channel;
 
 
     stage(stageNames[1]);
-    const channel = pipeline.selectRandomChannel(machineConfig.autoVideo.channels, rng);
-    log.ok(`Selected channel: ${channel.handle}`);
-    context.channel = channel;
+    const cookiesFile = await resolveCookiesForPlatform(channel.platform, workDir, log);
 
 
     stage(stageNames[2]);

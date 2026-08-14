@@ -231,8 +231,9 @@ def repair_env(bus, root, report):
     values = load_env(env)
     if not values.get("OPENROUTER_API_KEY", "").strip():
         report.error_line(bus, "OPENROUTER_API_KEY is empty - add your key at https://openrouter.ai/keys")
-    if not any(v.strip().startswith(("https://", "http://")) for v in values.get("AUTO_VIDEO_CHANNELS", "").split(",")):
-        report.error_line(bus, "AUTO_VIDEO_CHANNELS has no channel URLs - add at least one channel")
+    channels = [v.strip() for v in values.get("AUTO_VIDEO_CHANNELS", "").split(",") if v.strip()]
+    if not any(v.startswith(("https://", "http://")) or v.startswith("@") or " " not in v for v in channels):
+        report.error_line(bus, "AUTO_VIDEO_CHANNELS has no source channels - add at least one channel")
 
     cut = (values.get("VIDEO_CUT") or "").strip().lower()
     if cut not in VALID_CUTS:

@@ -568,7 +568,10 @@ async function validateRender({ outputPath, expectedDuration, expectedHasAudio, 
   const duration = Number(videoInfo.format?.duration) || 0;
   const hasAudio = Boolean(getPrimaryAudioStream(videoInfo));
 
-  const durationToSample = Math.max(1, Math.min(duration - 0.5, duration / 2));
+  const durationToSample = Math.max(
+    0.1,
+    Math.min(Math.max(duration - 0.5, 0.1), duration / 2)
+  );
   const frameStats = [];
   for (const fraction of [0.25, 0.5, 0.75]) {
     const timestamp = Math.max(0, Math.min(duration - 0.3, duration * fraction));
@@ -634,7 +637,10 @@ async function extractFrames(inputPath, count = 6, outDir) {
 
   for (let index = 0; index < target; index += 1) {
     const fraction = target === 1 ? 0.5 : index / (target - 1);
-    const timestamp = Math.min(duration - 0.2, Math.max(0.1, duration * fraction));
+    const timestamp = Math.max(
+      0.1,
+      Math.min(Math.max(duration - 0.2, 0.1), Math.max(0.1, duration * fraction))
+    );
     const framePath = path.join(outDir, `frame_${String(index).padStart(2, "0")}.jpg`);
     await runFfmpeg([
       "-y",

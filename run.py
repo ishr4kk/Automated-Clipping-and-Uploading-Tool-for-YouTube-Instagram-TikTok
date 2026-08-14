@@ -118,7 +118,18 @@ def load_env(path):
 
 
 def count_urls(value):
-    return sum(1 for part in str(value).split(",") if part.strip().startswith(("https://", "http://")))
+    parts = [part.strip() for part in str(value).split(",") if part.strip()]
+    return sum(1 for part in parts if _is_source_entry(part))
+
+
+def _is_source_entry(part):
+    if part.startswith(("https://", "http://")):
+        return True
+    if part.startswith("@"):
+        return True
+    if len(part) <= 200 and not any(c.isspace() for c in part):
+        return True
+    return False
 
 
 
@@ -275,7 +286,7 @@ def verify_env_values(verify, values):
     if channels > 0:
         verify.ok(f"AUTO_VIDEO_CHANNELS: {channels} channel(s)")
     else:
-        verify.error("AUTO_VIDEO_CHANNELS has no channel URLs - video generation cannot find sources")
+        verify.error("AUTO_VIDEO_CHANNELS has no source channels - video generation cannot find sources")
 
     playlists = count_urls(values.get("BACKGROUND_MUSIC_PLAYLISTS", ""))
     if playlists > 0:

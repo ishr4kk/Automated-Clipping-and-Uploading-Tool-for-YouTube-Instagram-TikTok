@@ -1,10 +1,4 @@
-"""OAuth credentials for YouTube, reusing the proven approach from
-the "let me paint please" project (verticals/upload.py + setup_youtube_oauth.py):
-- token loaded via Credentials.from_authorized_user_file
-- refreshed via Request() when expired and saved back
-- created via InstalledAppFlow.run_local_server(port=0) when missing
-- token files written with 0600 permissions
-"""
+
 
 import json
 import os

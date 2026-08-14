@@ -80,12 +80,14 @@ async function preflight(logger) {
   logger.ok(`yt-dlp available (${bundled})`);
 
   if (!machineConfig.openRouterApiKey) {
-    throw new Error(
-      "OPENROUTER_API_KEY is not configured in the project .env. " +
-      "It is required for movie-relevance verification, scene analysis, and caption generation."
+    logger.warn(
+      "OPENROUTER_API_KEY is not configured; running WITHOUT AI " +
+      "(keyword-only movie relevance, metadata-based captions). " +
+      "Set it in .env (https://openrouter.ai/keys) for scene analysis and AI captions."
     );
+  } else {
+    logger.ok("OpenRouter API key configured");
   }
-  logger.ok("OpenRouter API key configured");
 
   if (!machineConfig.autoVideo.channels.length) {
     throw new Error("No source channels configured (AUTO_VIDEO_CHANNELS is empty).");
