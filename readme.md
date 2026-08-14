@@ -1,4 +1,4 @@
-<h1 align="center" id="title">R4K clipping automation</h1>
+<h1 align="center" id="title">R4K clipping automation v1.0</h1>
 
 ##
 
