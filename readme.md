@@ -19,13 +19,8 @@
 ⚡ Clip → Edit → Caption → Upload.</p>
 
 <h1 align="center" id="title">📷📸 </h1>
-
-<img src="https://kommodo.ai/i/wW6UcCA8QA6SaAbtMqKX" alt="project-screenshot">
-
-
-
-<img src="https://cdn.discordapp.com/attachments/1524520665217237034/1536057633897971833/wm4fxfh.png?ex=6a7aad66&amp;is=6a795be6&amp;hm=6b51fad432c3de2d5efa1684e38514ed6f166a95f970caecef0ac3c72af875e7&amp;" alt="project-screenshot">
-
+![Dashboard](img/c0.png)
+![console](img/c1.png)
 
 ## 🤖 SETUP: 
 
