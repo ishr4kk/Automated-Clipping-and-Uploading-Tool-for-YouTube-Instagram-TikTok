@@ -405,6 +405,27 @@ def test_workflow_parallel_workers_independent():
         ok("workflow: TikTok + Instagram + YouTube run independently and stop together")
 
 
+def test_workflow_continuous_loop_generates_until_stopped():
+    """The START workflow now loops: after a video is uploaded to every
+    platform the next video is generated automatically. It keeps going until
+    STOP is pressed, then reports a clean summary."""
+    with tempfile.TemporaryDirectory() as tmp:
+        events = []
+        wf = make_fake_workflow(["tiktok", "youtube", "instagram"], tmp, {}, events.append)
+        wf.start()
+        deadline = time.time() + 20
+        generators = lambda: [r for r in FakeRunner.instances if "run.js" in " ".join(r.command)]
+        while len(generators()) < 2 and time.time() < deadline:
+            time.sleep(0.05)
+        assert len(generators()) >= 2, "loop did not generate a second video automatically"
+        wf.stop()
+        assert _await_stop(wf)
+        finished = [e for e in events if e["type"] == "finished"]
+        assert finished and finished[-1]["ok"] is True, finished
+        assert "video(s)" in finished[-1]["summary"], finished[-1]["summary"]
+        ok("workflow: continuous loop auto-generates the next video after uploads complete")
+
+
 def test_upload_manager_no_duplicate_worker():
     class BlockingRunner(FakeRunner):
         def __init__(self, command, source, bus, cwd=None):
@@ -873,6 +894,7 @@ def main():
     test_workflow_no_platforms()
     test_workflow_stop_requested()
     test_workflow_parallel_workers_independent()
+    test_workflow_continuous_loop_generates_until_stopped()
     test_upload_manager_no_duplicate_worker()
     test_upload_manager_three_platforms_independent()
     test_tabs_and_nav()

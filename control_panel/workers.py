@@ -84,6 +84,7 @@ class ProcessRunner:
         self.cwd = str(cwd or PROJECT_ROOT)
         self.process = None
         self._lock = threading.Lock()
+        self._stop_requested = threading.Event()
 
     def _spawn_flags(self):
         flags = 0
@@ -121,6 +122,9 @@ class ProcessRunner:
             pass
 
         code = self.process.wait()
+        if self._stop_requested.is_set():
+            self.bus.emit(self.source, LEVEL_INFO, f"Process stopped (code {code})")
+            return 0
         self.bus.emit(self.source, LEVEL_INFO, f"Process exited (code {code})")
         return code
 
@@ -128,6 +132,7 @@ class ProcessRunner:
         with self._lock:
             proc = self.process
         if proc and proc.poll() is None:
+            self._stop_requested.set()
             try:
                 proc.terminate()
             except OSError:
@@ -285,8 +290,14 @@ class UploadManager:
 
 
 class WorkflowController(threading.Thread):
-    """Runs the START workflow on a background thread, fully parallel:
+    """Runs the START workflow on a background thread, continuously:
 
+    One video at a time, strictly sequential: generate a video, upload it to
+    every selected platform (each uploader runs in watch mode on its own
+    independent thread), wait for the queues to fully drain, then generate
+    the next video and upload it — repeating until STOP is pressed.
+
+    Per video, the steps are:
     1. Start the selected platforms' uploader workers (watch mode) so they
        are already draining their queues while the generator still runs.
     2. Generate one video (node run.js) and stream its output live.
@@ -295,6 +306,11 @@ class WorkflowController(threading.Thread):
        generation; each platform uploads independently).
     5. Report per-platform results; videos that could not be uploaded stay in
        the upload folders, recoverable, and are never marked done.
+
+    The uploader workers stay alive between videos (each browser/session is
+    initialized once), so the whole pipeline is an endless generate/upload
+    loop. A failed generation is reported and the loop moves on; if uploads
+    cannot complete the workflow stops so files are never silently dropped.
 
     UI state is delivered through ``on_event`` (called from this thread;
     marshaling onto the Tk main thread is the listener's responsibility):
@@ -347,7 +363,7 @@ class WorkflowController(threading.Thread):
         summary = []
         ok = False
         try:
-            ok = self._execute(summary)
+            ok = self._execute_loop(summary)
         except WorkflowError as exc:
             self.bus.emit("CONTROLLER", LEVEL_ERROR, str(exc))
         except Exception as exc:
@@ -357,6 +373,63 @@ class WorkflowController(threading.Thread):
 
             self.manager.stop([p["key"] for p in self.platforms])
             self._finish(ok, " | ".join(summary) if summary else "Workflow stopped.")
+
+    def _execute_loop(self, summary):
+        """Run the START workflow continuously until STOP is pressed.
+
+        One video at a time, strictly sequential: generate -> upload to every
+        selected platform -> wait for the queues to drain -> generate the
+        next video -> upload -> ... The uploader workers stay alive between
+        videos (browser/session initialized once), so the whole pipeline is
+        an endless generate/upload loop.
+
+        A failed generation is reported and the loop moves on to the next
+        video (matching the machine's default stopOnError=false). If videos
+        cannot be uploaded — a dead uploader worker or the drain deadline —
+        the loop stops so files are never silently dropped.
+        """
+        if not self.platforms:
+            raise WorkflowError("No platform selected. Select at least one platform and try again.")
+
+        labels = ", ".join(p["label"] for p in self.platforms)
+        self._stage(f"Continuous workflow started for: {labels} - press STOP to end the session")
+
+        iteration = 0
+        while not self.stop_requested:
+            iteration += 1
+            self._stage(f"Starting video #{iteration}: generate, then upload to every selected platform")
+            try:
+                self._execute(summary)
+            except WorkflowError as exc:
+                self.bus.emit(
+                    "CONTROLLER",
+                    LEVEL_ERROR,
+                    f"Video #{iteration}: {exc} - moving on to the next video",
+                )
+                summary.append(f"Video #{iteration} ✗ ({exc})")
+                continue
+            if self.stop_requested:
+                break
+            leftovers = self._pending_videos()
+            for platform in self.platforms:
+                key = platform["key"]
+                new_failed = self._failed_dir_files(platform) - self._failed_baseline.get(key, set())
+                if new_failed:
+                    leftovers.setdefault(key, len(new_failed))
+            if leftovers:
+                raise WorkflowError(
+                    "Some uploads did not complete - the workflow was stopped. "
+                    "Failed videos stay recoverable in queue/<platform>/upload (or queue/yt/failed)."
+                )
+            self.bus.emit(
+                "CONTROLLER",
+                LEVEL_OK,
+                f"Video #{iteration} uploaded to every selected platform - generating the next video...",
+            )
+            summary.append(f"Video #{iteration} ✓")
+
+        summary.append(f"Session stopped after {iteration} video(s)")
+        return True
 
     def _platform_upload_dir(self, platform):
         return Path(self.cwd) / "queue" / platform["folder"] / UPLOAD_FOLDER_NAME
