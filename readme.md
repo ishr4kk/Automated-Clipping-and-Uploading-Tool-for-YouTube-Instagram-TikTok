@@ -20,7 +20,7 @@
 
 <h1 align="center" id="title">📷📸 </h1>
 
-<img src="https://cdn.discordapp.com/attachments/1524520665217237034/1536057583490834442/v0586v7.png?ex=6a7aad5a&amp;is=6a795bda&amp;hm=56ca8287c068dfe8f4bc230a0e4cb98020429b29bff08bf7e3b3f1e2f2655ab3&amp;" alt="project-screenshot">
+<img src="https://kommodo.ai/i/wW6UcCA8QA6SaAbtMqKX" alt="project-screenshot">
 
 
 
